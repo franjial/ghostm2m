@@ -11,6 +11,7 @@ from onem2m.resources import ResourcesFactory
 from onem2m.types import Operation, ResponseStatusCode, ResourceType
 from onem2m.primitive import ResponsePrimitive
 from onem2m.mappers import MappersFactory, ResourceMapper
+from onem2m.security import User
 
 def index(request):
 	return HttpResponse("hola mundo!")
@@ -38,6 +39,19 @@ def m2mrequest(request, origin_form):
 		if 'm2m:rqp' in data:
 			primitive = data['m2m:rqp']
 	except KeyError:
+		resp = ResponsePrimitive(0, ResponseStatusCode.BAD_REQUEST.value)
+		return JsonResponse(resp.toDict())
+
+	try:
+		if 'fr' in primitive:
+			fr = primitive['fr']
+			username, pwd = fr.split(':', maxsplit=2)
+			user = User(username,pwd)
+			if not user.valid():
+				resp = ResponsePrimitive(0, ResponseStatusCode.OPERATION_NOT_ALLOWED.value)
+				return JsonResponse(resp.toDict())
+
+	except:
 		resp = ResponsePrimitive(0, ResponseStatusCode.BAD_REQUEST.value)
 		return JsonResponse(resp.toDict())
 

@@ -12,3 +12,4 @@ class DBConnection(metaclass=Singleton):
 
 	def set_db(self, db):
 		self.db = self.db_client[db]
+		self.active_db = db

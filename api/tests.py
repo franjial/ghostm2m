@@ -9,8 +9,11 @@ from bson.objectid import ObjectId
 from onem2m.mappers import CSEBaseMapper
 from onem2m.resources import ResourcesFactory
 from onem2m.types import ResourceType
+from onem2m.security import User
 
 import json
+import sys
+
 
 class TestOneM2MAPI(TestCase):
     def setUp(self):
@@ -18,29 +21,24 @@ class TestOneM2MAPI(TestCase):
         settings.GHOSTM2M["dbname-test"]
         DBConnection().set_db(settings.GHOSTM2M["dbname-test"])
 
-    def __del__(self):
-        DBConnection().db_client.drop_database(settings.GHOSTM2M["dbname-test"])
-
-
-    def test_can_create_csebase(self):
-        resource = ResourcesFactory().create(ResourceType.CSEBase.value)
-        resource.set_csi(settings.GHOSTM2M['CSE-ID'])
-        ri = CSEBaseMapper().create(settings.GHOSTM2M['CSE-ID'], resource)
-
-        stored = DBConnection().db[settings.GHOSTM2M['CSE-ID']].find_one({'_id':ObjectId(ri)})
-        self.assertIn('m2m:cb', stored)
-        self.assertIn('csi', stored['m2m:cb'])
-        self.assertIn('ty', stored)
-        self.assertEqual(stored['m2m:cb']['csi'], settings.GHOSTM2M['CSE-ID'])
-        self.assertEqual(stored['ty'], 5)
-
 
     def test_can_create_ae(self):
+        # create CSE
+        resource = ResourcesFactory().create(ResourceType.CSEBase.value)
+        resource.set_csi(settings.GHOSTM2M['CSE-ID'])
+        CSEBaseMapper().create(settings.GHOSTM2M['CSE-ID'], resource)
+
+        # create admin user 
+        result = DBConnection().db['users'].find_one({'_id': settings.GHOSTM2M['admin-user']['username']})
+        if result is None:
+            DBConnection().db['users'].insert_one({'_id':settings.GHOSTM2M['admin-user']['username'],'pwd':settings.GHOSTM2M['admin-user']['pwd']})
+
+        # send request for create AE
         request = {'m2m:rqp':{
             'op':1,
             'ty':1,
             'pc':{'m2m:ae': {"apn":"lector-tarjetas"}},
-            'fr':'/Cernicalo/',
+            'fr':'{}:{}'.format(settings.GHOSTM2M['admin-user']['username'],settings.GHOSTM2M['admin-user']['pwd']),
             'to':'//localhost:80/Cernicalo'
         }}
 
@@ -54,4 +52,8 @@ class TestOneM2MAPI(TestCase):
         self.assertIn('m2m:rsp', response_content)
         self.assertIn('pc', response_content['m2m:rsp'])
         self.assertIn('m2m:ae', response_content['m2m:rsp']['pc'])
+
+    def tearDown(self):
+        sys.stderr.write('Eliminar base de datos test.\n')
+        DBConnection().db_client.drop_database(settings.GHOSTM2M["dbname-test"])
 
