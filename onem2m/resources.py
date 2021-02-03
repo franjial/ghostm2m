@@ -38,6 +38,9 @@ class Resource(ABC):
 	def _set_rtn(self):
 		self._rtn = None
 
+	def get_rtn(self):
+		return self._rtn
+
 	def get_type_name(self):
 		return self._rtn
 
@@ -47,7 +50,7 @@ class Resource(ABC):
 			for key in pc[self._rtn]:
 				if isinstance(pc[self._rtn][key], ObjectId):
 					pc[self._rtn][key] = str(pc[self._rtn][key])
-				setattr(self, key, pc[self._rtn][key])
+				#setattr(self, key, pc[self._rtn][key])
 		else:
 			raise TypeError('pc arg must be a dict')
 
@@ -82,13 +85,25 @@ class Resource(ABC):
 
 class AE(Resource):
 	"""
-	common interface of all AE resources
+	AE resource class
 	"""
 	def __init__(self):
 		super().__init__()
 
+		self.api = None  # APP-ID
+		self.apn = None  # [appname]
+		self.pi  = None  # parent-id
+
 	def _set_rtn(self):
 		self._rtn = "m2m:ae"
+
+	def load(self, pc):
+		super().load(pc)
+
+		for key in pc[self._rtn]:
+			if key=='apn': self.apn=pc[self._rtn]['apn']
+			if key=='api': self.api=pc[self._rtn]['api']
+			if key=='pi': self.pi=pc[self._rtn]['pi']
 
 	def set_id(self, _id):
 		super().set_id(_id)
@@ -98,9 +113,6 @@ class AE(Resource):
 
 	def get_id(self):
 		return self._id
-
-	def get_aei(self):
-		return self.aei
 
 class Container(Resource):
 	def __init__(self):
@@ -120,6 +132,7 @@ class Container(Resource):
 
 	def _set_rtn(self):
 		self._rtn = "m2m:cnt"
+
 
 	def set_la(self, la):
 		if isinstance(la, dict):
@@ -168,9 +181,13 @@ class CSEBase(Resource):
 		self.resource[self._rtn]['csi'] = csi
 
 class ResourcesFactory(AbstractFactory):
-	def create(self, ty, pc={}, ri=None, pi=None):
+	def create(self, ty, **kwargs):
 		resource_data = dict()
 		resource = None
+
+		pc = kwargs.get('pc', None)
+		ri = kwargs.get('ri', None)
+		pi = kwargs.get('pi', None)
 
 		if ty == ResourceType.contentInstance.value:
 
@@ -198,14 +215,7 @@ class ResourcesFactory(AbstractFactory):
 				resource = self.create_container(pc, ri=ri, pi=pi)	
 
 		if ty == ResourceType.AE.value:
-			try:
-				if "m2m:ae" in pc:
-					resource_data = pc["m2m:ae"]
-					resource = self.create_ae(pc, ri=ri, pi=pi)
-				else:
-					resource = self.create_ae(ri=ri, pi=pi)
-			except:
-				resource = self.create_ae(ri=ri, pi=pi)
+			resource = self.create_ae(**kwargs)
 
 		if ty == ResourceType.CSEBase.value:
 			try:
@@ -222,7 +232,6 @@ class ResourcesFactory(AbstractFactory):
 			return resource
 		else:
 			raise NotImplementedError
-
 
 	def create_csebase(self, pc=None, ri=None, pi=None):
 		cb = CSEBase()
@@ -258,15 +267,15 @@ class ResourcesFactory(AbstractFactory):
 
 		return cin
 
-	def create_ae(self, pc=None, ri=None, pi=None):
+	def create_ae(self, **kwargs):
+		ri = kwargs.get('ri', None)
+		pi = kwargs.get('pi', None)
+		pc = kwargs.get('pc', None)	
+
 		ae = AE()
-		if pc is not None:
-			ae.load(pc)
 
-		if ri is not None:
-			ae.set_id(ri)
-
-		if pi is not None:
-			ae.set_pi(pi)
+		if pc is not None: ae.load(pc)
+		if ri is not None: ae.set_id(ri)
+		if pi is not None: ae.set_pi(pi)
 
 		return ae

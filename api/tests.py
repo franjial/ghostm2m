@@ -6,8 +6,8 @@ from onem2m.db import DBConnection
 from bson.objectid import ObjectId
 
 
-from onem2m.mappers import CSEBaseMapper
-from onem2m.resources import ResourcesFactory
+from onem2m.mappers import CSEBaseMapper, MappersFactory
+from onem2m.resources import ResourcesFactory, AE
 from onem2m.types import ResourceType
 from onem2m.security import User
 
@@ -21,12 +21,42 @@ class TestOneM2MAPI(TestCase):
         settings.GHOSTM2M["dbname-test"]
         DBConnection().set_db(settings.GHOSTM2M["dbname-test"])
 
+    def test_module_create_ae(self):
+        f = ResourcesFactory()
 
-    def test_can_create_ae(self):
         # create CSE
-        resource = ResourcesFactory().create(ResourceType.CSEBase.value)
-        resource.set_csi(settings.GHOSTM2M['CSE-ID'])
-        CSEBaseMapper().create(settings.GHOSTM2M['CSE-ID'], resource)
+        csebase = f.create(ResourceType.CSEBase.value)
+        csebase.set_csi(settings.GHOSTM2M['CSE-ID'])
+        csebase_ri = CSEBaseMapper().create(settings.GHOSTM2M['CSE-ID'], csebase)
+
+        # create AE
+        ae = f.create(ty=ResourceType.AE.value, 
+                      pi=csebase_ri, 
+                      pc={'m2m:ae':{'api':'test','apn':'rfid-reader'}})
+                      
+        ae_mapper = MappersFactory().get(ae)
+        ae_ri = ae_mapper.create(settings.GHOSTM2M['CSE-ID'], ae)
+
+        # test dict
+        self.assertIn('m2m:ae',ae.resource)
+        self.assertIn('pi', ae.resource['m2m:ae'])
+        self.assertEqual(csebase_ri, ae.resource['m2m:ae']['pi'])
+
+        # test module 
+        self.assertEqual(ae.apn, 'rfid-reader')
+        self.assertEqual(ae.api, 'test')
+        self.assertEqual(ae.pi, csebase_ri)
+
+        recorded_ae = ae_mapper.retrieve(settings.GHOSTM2M['CSE-ID'], {'_id': ObjectId(ae_ri)})
+
+        self.assertIsInstance(recorded_ae, AE)
+        self.assertEqual(recorded_ae.apn, 'rfid-reader')
+        self.assertEqual(recorded_ae.api, 'test')
+        self.assertEqual(recorded_ae.pi, csebase_ri)
+
+
+    def test_api_create_ae(self):
+        
 
         # create admin user 
         result = DBConnection().db['users'].find_one({'_id': settings.GHOSTM2M['admin-user']['username']})
