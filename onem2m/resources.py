@@ -25,7 +25,9 @@ class Resource(ABC):
 	def __init__(self):
 
 		self._id = None
-		self.ty = None  #resourceType
+		self.ty = None # resourceType
+		self.pi = None # parent-id
+		self.ri = None # resource-id
 		
 		self._rtn = None # p.e. m2m:cnt
 		self._set_rtn()
@@ -92,7 +94,6 @@ class AE(Resource):
 
 		self.api = None  # APP-ID
 		self.apn = None  # [appname]
-		self.pi  = None  # parent-id
 
 	def _set_rtn(self):
 		self._rtn = "m2m:ae"
@@ -104,6 +105,7 @@ class AE(Resource):
 			if key=='apn': self.apn=pc[self._rtn]['apn']
 			if key=='api': self.api=pc[self._rtn]['api']
 			if key=='pi': self.pi=pc[self._rtn]['pi']
+			if key=='ri': self.ri=pc[self._rtn]['ri']
 
 	def set_id(self, _id):
 		super().set_id(_id)
@@ -115,36 +117,40 @@ class AE(Resource):
 		return self._id
 
 class Container(Resource):
+	"""
+	The <container> resource represents a container for data instances. It is used to share 
+	information with other entities and potentially to track the data. A <container> resource 
+	has no associated content. It has only attributes and child resources.
+	"""
 	def __init__(self):
 		super().__init__()
 		self._rtn = "m2m:cnt"
 		self.resource["m2m:cnt"] = dict()
 		
-		self.resource["m2m:cnt"]['la'] = {}
-		self.resource["m2m:cnt"]['ol'] = {}
+		#self.resource["m2m:cnt"]['la'] = None
+		#self.resource["m2m:cnt"]['ol'] = None
 		self.resource["m2m:cnt"]['ct'] = datetime.datetime.now() #creationTime
 		self.resource["m2m:cnt"]['lt'] = self.resource["m2m:cnt"]['ct'] #lastModifiedTime
 
-		self.la = {}
-		self.ol = {}
+		self.la = None
+		self.ol = None
 		self.ct = self.resource["m2m:cnt"]['ct']
 		self.lt = self.resource["m2m:cnt"]['ct']
+		self.rn = None # resourceName
+
+	def load(self, pc):
+		super().load(pc)
+
+		for key in pc[self._rtn]:
+			if key=='la': self.apn=pc[self._rtn]['la']
+			if key=='ol': self.api=pc[self._rtn]['ol']
+			if key=='ct': self.pi=pc[self._rtn]['ct']
+			if key=='lt': self.lt=pc[self._rtn]['lt']
+			if key=='rn': self.rn=pc[self._rtn]['rn']
+			if key=='pi': self.pi=pc[self._rtn]['pi']
 
 	def _set_rtn(self):
 		self._rtn = "m2m:cnt"
-
-
-	def set_la(self, la):
-		if isinstance(la, dict):
-			self.la = la
-		else:
-			raise TypeError
-
-	def set_ol(self, ol):
-		if isinstance(ol, dict):
-			self.ol = ol
-		else:
-			raise TypeError
 
 class ContentInstance(Resource):
 	"""
@@ -190,7 +196,6 @@ class ResourcesFactory(AbstractFactory):
 		pi = kwargs.get('pi', None)
 
 		if ty == ResourceType.contentInstance.value:
-
 			try:
 				if "m2m:cin" in pc:
 					resource_data = pc["m2m:cin"]
@@ -203,16 +208,7 @@ class ResourcesFactory(AbstractFactory):
 				resource = self.create_content_instance(pc, ri=ri, pi=pi)
 
 		if ty == ResourceType.container.value:
-			try:
-				if "m2m:cnt" in pc:
-					resource_data = pc["m2m:cnt"]
-					resource = self.create_container(pc, ri=ri, pi=pi)
-				else:
-					pc = {"m2m:cnt":{}}
-					resource = self.create_container(pc, ri=ri, pi=pi)
-			except Exception as e:
-				pc = {"m2m:cnt":{}}
-				resource = self.create_container(pc, ri=ri, pi=pi)	
+			resource = self.create_container(**kwargs)
 
 		if ty == ResourceType.AE.value:
 			resource = self.create_ae(**kwargs)
@@ -242,15 +238,21 @@ class ResourcesFactory(AbstractFactory):
 
 		return cb
 
-	def create_container(self, pc=None, ri=None, pi=None):
+	def create_container(self, **kwargs):
+		ri = kwargs.get('ri', None)
+		pi = kwargs.get('pi', None)
+		pc = kwargs.get('pc', None)
+		rn = kwargs.get('rn', None)
+		
 		con = Container()
-		if pc is not None:
-			con.load(pc)
-		if ri is not None:
-			con.set_id(ri)
+		if pc is not None: con.load(pc)
 
-		if pi is not None:
-			con.set_pi(pi)
+		if rn is not None: con.rn = rn
+		if ri is not None: 
+			con.set_id(ri)
+			con.ri = ri
+		if pi is not None: con.set_pi(pi)
+		
 
 		return con
 
@@ -275,7 +277,9 @@ class ResourcesFactory(AbstractFactory):
 		ae = AE()
 
 		if pc is not None: ae.load(pc)
-		if ri is not None: ae.set_id(ri)
+		if ri is not None: 
+			ae.set_id(ri)
+			ae.ri = ri
 		if pi is not None: ae.set_pi(pi)
 
 		return ae

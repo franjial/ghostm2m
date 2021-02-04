@@ -31,8 +31,6 @@ class ResourceMapper:
 			to_store = resource.toDict()[resource.get_rtn()].copy()
 			to_store['rtn'] = resource.get_rtn()
 			to_store['ty'] = resource.ty
-			if 'ty' not in to_store:
-				to_store['ty'] = resource.ty
 			result = self._db[cseid].insert_one(to_store)
 			return str(result.inserted_id)
 		else:
