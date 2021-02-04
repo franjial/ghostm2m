@@ -27,7 +27,7 @@ class TestOneM2MAPI(TestCase):
         # create CSE
         csebase = f.create(ResourceType.CSEBase.value)
         csebase.set_csi(settings.GHOSTM2M['CSE-ID'])
-        csebase_ri = CSEBaseMapper().create(settings.GHOSTM2M['CSE-ID'], csebase)
+        csebase_ri = CSEBaseMapper().store(settings.GHOSTM2M['CSE-ID'], csebase)
 
         # create AE
         ae = f.create(ty=ResourceType.AE.value, 
@@ -35,7 +35,7 @@ class TestOneM2MAPI(TestCase):
                       pc={'m2m:ae':{'api':'test','apn':'rfid-reader'}})
                       
         ae_mapper = MappersFactory().get(ae)
-        ae_ri = ae_mapper.create(settings.GHOSTM2M['CSE-ID'], ae)
+        ae_ri = ae_mapper.store(settings.GHOSTM2M['CSE-ID'], ae)
 
         # test dict
         self.assertIn('m2m:ae',ae.resource)

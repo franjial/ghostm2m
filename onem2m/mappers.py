@@ -26,15 +26,14 @@ class ResourceMapper:
 	def __init__(self):
 		self._db =  DBConnection().db
 
-	def create(self, cseid, resource):
+	def store(self, cseid, resource):
 		if isinstance(resource, Resource):
-			#if cseid not in self._db.list_collection_names():
-			#	raise KeyError
-
-			to_store = resource.toDict().copy()
+			to_store = resource.toDict()[resource.get_rtn()].copy()
+			to_store['rtn'] = resource.get_rtn()
 			to_store['ty'] = resource.ty
+			if 'ty' not in to_store:
+				to_store['ty'] = resource.ty
 			result = self._db[cseid].insert_one(to_store)
-			
 			return str(result.inserted_id)
 		else:
 			raise TypeError
@@ -50,10 +49,23 @@ class ResourceMapper:
 
 		elif 'ty' in result:
 			resource = ResourcesFactory().create(ty=result['ty'])
-			resource.load(result)
 
+			rtn = None
+			if 'rtn' in result:
+				rtn = result['rtn']
+				result.pop('rtn')
+			else:
+				raise KeyError
+
+			_id = None
 			if '_id' in result:
-				resource.set_id(str(result['_id']))
+				_id = result['_id']
+				result.pop('_id')
+			else:
+				raise KeyError
+
+			resource.load({rtn: result})
+			resource.set_id(str(_id))
 
 			return resource
 
@@ -73,10 +85,10 @@ class ContentInstanceMapper(ResourceMapper):
 	def __init__(self):
 		super().__init__()
 
-	def create(self, csi, resource):
+	def store(self, csi, resource):
 
 		if isinstance(resource, ContentInstance):
-			ri = super().create(csi, resource)
+			ri = super().store(csi, resource)
 		else:
 			raise TypeError
 
@@ -90,9 +102,9 @@ class CSEBaseMapper(ResourceMapper):
 	def __init__(self):
 		super().__init__()
 
-	def create(self, cseid, resource):
+	def store(self, cseid, resource):
 		if isinstance(resource, CSEBase):
-			return super().create(cseid, resource)
+			return super().store(cseid, resource)
 		else:
 			raise TypeError
 

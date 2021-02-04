@@ -84,7 +84,7 @@ def m2mrequest(request, origin_form):
 					pc = primitive['pc']
 				resource = ResourcesFactory().create(ty=primitive['ty'], pc=pc, pi=target_resource)
 				mapper = MappersFactory().get(resource)
-				ri = mapper.create(http_to['cse-id'], resource)
+				ri = mapper.store(http_to['cse-id'], resource)
 				resource.set_id(ri)
 				resp = ResponsePrimitive(rsc=ResponseStatusCode.CREATED.value)
 				resp.set_pc(resource.toDict())
