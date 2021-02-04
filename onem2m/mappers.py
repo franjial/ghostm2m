@@ -32,6 +32,7 @@ class ResourceMapper:
 			to_store['rtn'] = resource.get_rtn()
 			to_store['ty'] = resource.ty
 			result = self._db[cseid].insert_one(to_store)
+
 			return str(result.inserted_id)
 		else:
 			raise TypeError
@@ -47,6 +48,7 @@ class ResourceMapper:
 
 		elif 'ty' in result:
 			resource = ResourcesFactory().create(ty=result['ty'])
+			resource.load(pc={resource.get_rtn(): result})
 
 			rtn = None
 			if 'rtn' in result:
@@ -84,16 +86,15 @@ class ContentInstanceMapper(ResourceMapper):
 		super().__init__()
 
 	def store(self, csi, resource):
-
+		stored_ri = None
 		if isinstance(resource, ContentInstance):
-			ri = super().store(csi, resource)
+			stored_ri = super().store(csi, resource)
 		else:
 			raise TypeError
 
-		if hasattr(resource, 'pi') and resource.pi is not None:
-			self._db[csi].update_one({'_id':ObjectId(resource.pi)},{'$set': {'m2m:cnt': {'la':ObjectId(ri)}}})
-
-		return ri
+		if resource.pi is not None and stored_ri is not None:
+			self._db[csi].update_one({'_id':ObjectId(resource.pi)},{'$set': {'la':ObjectId(stored_ri)}})
+		return stored_ri
 
 
 class CSEBaseMapper(ResourceMapper):

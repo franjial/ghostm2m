@@ -6,6 +6,7 @@ from bson.objectid import ObjectId
 
 import json
 import datetime
+import sys
 
 from onem2m.resources import ResourcesFactory
 from onem2m.types import Operation, ResponseStatusCode, ResourceType
@@ -79,6 +80,10 @@ def m2mrequest(request, origin_form):
 				else:
 					target_resource = http_to['unstructured-resource-id']
 
+				if target_resource is None:
+					resp = ResponsePrimitive(rsc=ResponseStatusCode.BAD_REQUEST.value)
+					return JsonResponse(resp.toDict())
+
 				pc = None
 				if 'pc' in primitive:
 					pc = primitive['pc']
@@ -92,6 +97,7 @@ def m2mrequest(request, origin_form):
 
 			except Exception as e:
 				print(e)
+				sys.stderr.write('-->'+str(e)+'\n')
 				resp = ResponsePrimitive(rsc=ResponseStatusCode.BAD_REQUEST.value)
 				return JsonResponse(resp.toDict())
 

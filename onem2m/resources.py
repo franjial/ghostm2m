@@ -58,11 +58,9 @@ class Resource(ABC):
 
 	def set_id(self, _id):
 		self._id = _id
+		self.ri = _id
+		self.resource[self._rtn]['ri'] = _id
 
-		try:
-			self.resource[self._rtn]['ri'] = _id
-		except:
-			raise KeyError
 
 	def get_id(self):
 		return self._id
@@ -124,27 +122,26 @@ class Container(Resource):
 	"""
 	def __init__(self):
 		super().__init__()
-		self._rtn = "m2m:cnt"
-		self.resource["m2m:cnt"] = dict()
+		self.resource[self._rtn] = dict()
 		
-		#self.resource["m2m:cnt"]['la'] = None
-		#self.resource["m2m:cnt"]['ol'] = None
-		self.resource["m2m:cnt"]['ct'] = datetime.datetime.now() #creationTime
-		self.resource["m2m:cnt"]['lt'] = self.resource["m2m:cnt"]['ct'] #lastModifiedTime
+		#self.resource[self._rtn]['la'] = None
+		#self.resource[self._rtn]['ol'] = None
+		self.resource[self._rtn]['ct'] = datetime.datetime.now() #creationTime
+		self.resource[self._rtn]['lt'] = self.resource["m2m:cnt"]['ct'] #lastModifiedTime
 
 		self.la = None
 		self.ol = None
-		self.ct = self.resource["m2m:cnt"]['ct']
-		self.lt = self.resource["m2m:cnt"]['ct']
+		self.ct = self.resource[self._rtn]['ct']
+		self.lt = self.resource[self._rtn]['ct']
 		self.rn = None # resourceName
 
 	def load(self, pc):
 		super().load(pc)
 
 		for key in pc[self._rtn]:
-			if key=='la': self.apn=pc[self._rtn]['la']
-			if key=='ol': self.api=pc[self._rtn]['ol']
-			if key=='ct': self.pi=pc[self._rtn]['ct']
+			if key=='la': self.la=pc[self._rtn]['la']
+			if key=='ol': self.ol=pc[self._rtn]['ol']
+			if key=='ct': self.ct=pc[self._rtn]['ct']
 			if key=='lt': self.lt=pc[self._rtn]['lt']
 			if key=='rn': self.rn=pc[self._rtn]['rn']
 			if key=='pi': self.pi=pc[self._rtn]['pi']
@@ -154,16 +151,52 @@ class Container(Resource):
 
 class ContentInstance(Resource):
 	"""
-	common interface of all ContentInstance resources
+	ContentInstance resource
 	"""
 	def __init__(self):
 		super().__init__()
 
+		self.rn = None  # resourceName
+		self.con = None # content
+		self._st = 0     # stateTag
+		self.ct = datetime.datetime.now()  # creationTime
+		self.lt = self.ct  #lastModifiedTime
+
+		self.resource[self._rtn]['ct'] = self.ct
+		self.resource[self._rtn]['lt'] = self.lt
+		self.resource[self._rtn]['st'] = self.st
+		self.resource[self._rtn]['cs'] = self.cs
+
+	##
+	# ONLY READ PROPERTIES
+	#
+
+	@property
+	def cs(self):
+		if self.con is None: return 0
+		else: return len(self.con)
+
+	@property
+	def st(self):
+		return self._st
+	
+	#
+	# ONLY READ PROPERTIES
+	######
+
+
 	def _set_rtn(self):
 		self._rtn = "m2m:cin"
 
-	def set_content(self, con):
-		self.resource["m2m:cin"]["con"] = con
+	def load(self, pc):
+		super().load(pc)
+
+		for key in pc[self._rtn]:
+			if key=='pi': self.pi=pc[self._rtn]['pi']    # parentID
+			if key=='rn': self.rn=pc[self._rtn]['rn']    # resourceName
+			if key=='con': self.con=pc[self._rtn]['con'] # content
+			if key=='st': self._st=pc[self._rtn]['st']   # stateTag
+
 
 class CSEBase(Resource):
 	def __init__(self):
@@ -196,20 +229,11 @@ class ResourcesFactory(AbstractFactory):
 		pi = kwargs.get('pi', None)
 
 		if ty == ResourceType.contentInstance.value:
-			try:
-				if "m2m:cin" in pc:
-					resource_data = pc["m2m:cin"]
-					resource = self.create_content_instance(pc, ri=ri, pi=pi)
-				else:
-					pc = {"m2m:cin":{}}
-					resource = self.create_content_instance(pc, ri=ri, pi=pi)
-			except:
-				pc = {"m2m:cin":{}}
-				resource = self.create_content_instance(pc, ri=ri, pi=pi)
+			resource = self.create_content_instance(**kwargs)
 
 		if ty == ResourceType.container.value:
 			resource = self.create_container(**kwargs)
-
+		
 		if ty == ResourceType.AE.value:
 			resource = self.create_ae(**kwargs)
 
@@ -245,27 +269,35 @@ class ResourcesFactory(AbstractFactory):
 		rn = kwargs.get('rn', None)
 		
 		con = Container()
-		if pc is not None: con.load(pc)
+		if pc is not None: 
+			con.load(pc)
+			try:
+				pc_ri = con.resource['m2m:cnt']['ri']
+				con.set_id(pc_ri)
+			except:
+				if ri is not None:
+					con.set_id(ri)
 
 		if rn is not None: con.rn = rn
-		if ri is not None: 
-			con.set_id(ri)
-			con.ri = ri
 		if pi is not None: con.set_pi(pi)
 		
-
 		return con
 
-	def create_content_instance(self, pc=None, ri=None, pi=None):
+	def create_content_instance(self, **kwargs):
+		ri = kwargs.get('ri', None)
+		pi = kwargs.get('pi', None)
+		pc = kwargs.get('pc', None)
+
 		cin = ContentInstance()
-		if pc is not None:
+		if pc is not None: 
 			cin.load(pc)
-		if ri is not None:
-			cin.set_id(ri)
-
-		if pi is not None:
-			cin.set_pi(pi)
-
+			try:
+				pc_ri = cin.resource['m2m:cin']['ri']
+				cin.set_id(pc_ri)
+			except:
+				if ri is not None:
+					cin.set_id(ri)
+		if pi is not None: cin.set_pi(pi)
 
 		return cin
 
@@ -277,9 +309,15 @@ class ResourcesFactory(AbstractFactory):
 		ae = AE()
 
 		if pc is not None: ae.load(pc)
-		if ri is not None: 
-			ae.set_id(ri)
-			ae.ri = ri
+		if pc is not None: 
+			ae.load(pc)
+			try:
+				pc_ri = ae.resource['m2m:ae']['ri']
+				ae.set_id(pc_ri)
+			except:
+				if ri is not None:
+					ae.set_id(ri)
+
 		if pi is not None: ae.set_pi(pi)
 
 		return ae
