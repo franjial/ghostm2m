@@ -30,6 +30,10 @@ GHOSTM2M = {
 }
 ```
 
+## Run Scripts
+
+python3 manage.py runscript create-cse --settings ghostm2m.settings_production
+
 ## Test
 
 python manage.py test --settings=ghostm2m.settings_development

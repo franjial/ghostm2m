@@ -52,7 +52,7 @@ def m2mrequest(request, origin_form):
 				resp = ResponsePrimitive(0, ResponseStatusCode.OPERATION_NOT_ALLOWED.value)
 				return JsonResponse(resp.toDict())
 
-	except:
+	except Exception:
 		resp = ResponsePrimitive(0, ResponseStatusCode.BAD_REQUEST.value)
 		return JsonResponse(resp.toDict())
 
@@ -95,9 +95,7 @@ def m2mrequest(request, origin_form):
 				resp.set_pc(resource.toDict())
 				return JsonResponse(resp.toDict())	
 
-			except Exception as e:
-				print(e)
-				sys.stderr.write('-->'+str(e)+'\n')
+			except:
 				resp = ResponsePrimitive(rsc=ResponseStatusCode.BAD_REQUEST.value)
 				return JsonResponse(resp.toDict())
 
@@ -145,8 +143,7 @@ def m2mrequest(request, origin_form):
 				rsp = ResponsePrimitive(rsc=ResponseStatusCode.NOT_IMPLEMENTED.value)
 				return JsonResponse(rsp.toDict())
 
-		except Exception as e:
-			print(str(e))
+		except Exception:
 			rsp = ResponsePrimitive(rsc=ResponseStatusCode.INTERNAL_SERVER_ERROR.value)
 			return JsonResponse(rsp.toDict())
 
