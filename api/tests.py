@@ -8,7 +8,7 @@ from bson.objectid import ObjectId
 
 from onem2m.mappers import CSEBaseMapper, MappersFactory, ResourceMapper
 from onem2m.resources import ResourcesFactory, AE, Container, ContentInstance
-from onem2m.types import ResourceType, Operation
+from onem2m.types import ResourceType, Operation, ResponseStatusCode
 from onem2m.security import User
 
 import json
@@ -340,7 +340,21 @@ class TestOneM2MAPI(TestCase):
         cin.set_id(cin_ri)
 
         # Request CSE
-        # @TODO
+        #
+        request = {'m2m:rqp':{
+            'op': Operation.Retrieve.value,
+            'fr':'{}:{}'.format(settings.GHOSTM2M['admin-user']['username'],settings.GHOSTM2M['admin-user']['pwd']),
+            'to':'/~/Cernicalo',
+        }}
+        request_str = json.dumps(request)
+        response = self.client.generic('GET', '/~/Cernicalo',
+                                    request_str,
+                                    'application/json')
+        self.assertEqual(response.status_code, 200)
+        response_cse = json.loads(response.content)['m2m:rsp']
+        self.assertIn('rsc', response_cse)
+        self.assertEqual(response_cse['rsc'], ResponseStatusCode.OK.value)
+
 
         # Request AE
         request = {'m2m:rqp':{

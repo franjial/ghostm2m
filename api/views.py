@@ -120,7 +120,7 @@ def m2mrequest(request, origin_form):
 				if 'unstructured-resource-id' in http_to:
 					resource = ResourceMapper().retrieve(http_to["cse-id"], {'_id': ObjectId(http_to['unstructured-resource-id'])})
 				else:
-					resource = ResourceMapper().retrieve(http_to["cse-id"], {'m2m:cb':{'csi': http_to['cse-id']}})
+					resource = ResourceMapper().retrieve(http_to["cse-id"], {'csi': http_to['cse-id']})
 
 				if 'attr' in http_to:
 					if hasattr(resource, http_to['attr']):

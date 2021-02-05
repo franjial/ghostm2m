@@ -14,7 +14,7 @@ def run():
     base = DBConnection().db[settings.GHOSTM2M['CSE-ID']]
     result = base.find_one({'ty':ResourceType.CSEBase.value,'m2m:cb':{'csi': settings.GHOSTM2M['CSE-ID']}})
     if result is None:
-        ri=CSEBaseMapper().create(settings.GHOSTM2M['CSE-ID'], resource)
+        ri=CSEBaseMapper().store(settings.GHOSTM2M['CSE-ID'], resource)
         print('Creado CSEBase. ', ri)
     else:
         print('CSEBase ya existe. ', result)
