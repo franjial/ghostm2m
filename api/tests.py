@@ -111,6 +111,7 @@ class TestOneM2MAPI(TestCase):
         self.assertIn('m2m:cnt',cnt.resource)
         self.assertIn('pi', cnt.resource['m2m:cnt'])
         self.assertIn('rn', cnt.resource['m2m:cnt'])
+        
 
         self.assertEqual(ae_ri, cnt.resource['m2m:cnt']['pi'])
         self.assertEqual('corner-rfids', cnt.resource['m2m:cnt']['rn'])
@@ -229,8 +230,6 @@ class TestOneM2MAPI(TestCase):
         self.assertEqual(recorded_cin.con, 'abcdef')
         self.assertEqual(recorded_cin.pi, cnt_ri)
 
-        
-
     def test_api_create_cin(self):
         # create admin user 
         result = DBConnection().db['users'].find_one({'_id': settings.GHOSTM2M['admin-user']['username']})
@@ -299,6 +298,125 @@ class TestOneM2MAPI(TestCase):
         parent = ResourceMapper().retrieve(cseid=settings.GHOSTM2M['CSE-ID'], ft={'_id':ObjectId(cin.pi)})
         self.assertIsInstance(parent, Container)
         self.assertNotEqual(parent.la, None)
+
+    def test_api_retrieve(self):
+
+        f = ResourcesFactory()
+
+        # create admin user 
+        result = DBConnection().db['users'].find_one({'_id': settings.GHOSTM2M['admin-user']['username']})
+        if result is None:
+            DBConnection().db['users'].insert_one({'_id':settings.GHOSTM2M['admin-user']['username'],'pwd':settings.GHOSTM2M['admin-user']['pwd']})
+
+
+        # create CSE
+        csebase = f.create(ResourceType.CSEBase.value)
+        csebase.set_csi(settings.GHOSTM2M['CSE-ID'])
+        csebase_ri = CSEBaseMapper().store(settings.GHOSTM2M['CSE-ID'], csebase)
+
+        # create AE
+        ae = f.create(ty=ResourceType.AE.value, 
+                      pi=csebase_ri, 
+                      pc={'m2m:ae':{'api':'test','apn':'rfid-reader'}})
+                      
+        ae_mapper = MappersFactory().get(ae)
+        ae_ri = ae_mapper.store(settings.GHOSTM2M['CSE-ID'], ae)
+        ae.set_id(ae_ri)
+
+        # create Container
+        cnt = f.create(ty=ResourceType.container.value,
+                       pi=ae_ri,
+                       pc={'m2m:cnt':{'rn':'corner-rfids'}})
+        cnt_mapper = MappersFactory().get(cnt)
+        cnt_ri = cnt_mapper.store(settings.GHOSTM2M['CSE-ID'], cnt)
+        cnt.set_id(cnt_ri)
+        
+        # create ContentInstance
+        cin = f.create(ty=ResourceType.contentInstance.value,
+                       pi=cnt_ri,
+                       pc={'m2m:cin':{'con':'abcdef'}})
+        cin_mapper = MappersFactory().get(cin)
+        cin_ri = cin_mapper.store(settings.GHOSTM2M['CSE-ID'], cin)
+        cin.set_id(cin_ri)
+
+        # Request CSE
+        # @TODO
+
+        # Request AE
+        request = {'m2m:rqp':{
+            'op': Operation.Retrieve.value,
+            'fr':'{}:{}'.format(settings.GHOSTM2M['admin-user']['username'],settings.GHOSTM2M['admin-user']['pwd']),
+            'to':'/~/Cernicalo',
+        }}
+
+        request_str = json.dumps(request)
+        response = self.client.generic('GET', '/~/Cernicalo/{}'.format(ae_ri),
+                                    request_str,
+                                    'application/json')
+        self.assertEqual(response.status_code, 200)
+        response_ae = json.loads(response.content)['m2m:rsp']
+        self.assertIn('pc', response_ae)
+        self.assertIn('m2m:ae', response_ae['pc'])
+        self.assertIn('apn', response_ae['pc']['m2m:ae'])
+        self.assertIn('ri', response_ae['pc']['m2m:ae'])
+
+        # Request Container
+        request = {'m2m:rqp':{
+            'op': Operation.Retrieve.value,
+            'fr':'{}:{}'.format(settings.GHOSTM2M['admin-user']['username'],settings.GHOSTM2M['admin-user']['pwd']),
+            'to':'/~/Cernicalo',
+        }}
+
+        request_str = json.dumps(request)
+        response = self.client.generic('GET', '/~/Cernicalo/{}'.format(cnt_ri),
+                                    request_str,
+                                    'application/json')
+        self.assertEqual(response.status_code, 200)
+        response_cnt = json.loads(response.content)['m2m:rsp']
+        self.assertIn('pc', response_cnt)
+        self.assertIn('m2m:cnt', response_cnt['pc'])
+        self.assertIn('rn', response_cnt['pc']['m2m:cnt'])
+        self.assertIn('ri', response_cnt['pc']['m2m:cnt'])
+
+        # Request ContentInstance
+        request = {'m2m:rqp':{
+            'op': Operation.Retrieve.value,
+            'fr':'{}:{}'.format(settings.GHOSTM2M['admin-user']['username'],settings.GHOSTM2M['admin-user']['pwd']),
+            'to':'/~/Cernicalo',
+        }}
+
+        request_str = json.dumps(request)
+        response = self.client.generic('GET', '/~/Cernicalo/{}'.format(cin_ri),
+                                    request_str,
+                                    'application/json')
+        self.assertEqual(response.status_code, 200)
+        response_cin = json.loads(response.content)['m2m:rsp']
+        self.assertIn('pc', response_cin)
+        self.assertIn('m2m:cin', response_cin['pc'])
+        self.assertIn('con', response_cin['pc']['m2m:cin'])
+        self.assertIn('ri', response_cin['pc']['m2m:cin'])
+
+        # Request <last> <ContentInstance>
+        request = {'m2m:rqp':{
+            'op': Operation.Retrieve.value,
+            'fr':'{}:{}'.format(settings.GHOSTM2M['admin-user']['username'],settings.GHOSTM2M['admin-user']['pwd']),
+            'to':'/~/Cernicalo',
+        }}
+        request_str = json.dumps(request)
+        response = self.client.generic('GET', '/~/Cernicalo/{}/la'.format(cnt_ri),
+                                    request_str,
+                                    'application/json')
+        self.assertEqual(response.status_code, 200)
+        response_la = json.loads(response.content)['m2m:rsp']
+        self.assertIn('pc', response_cin)
+        
+        
+
+
+
+
+
+
 
     def tearDown(self):
         #sys.stderr.write('Eliminar base de datos test.\n')
