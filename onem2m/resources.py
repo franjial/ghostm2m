@@ -134,6 +134,7 @@ class Container(Resource):
 		self.ct = self.resource[self._rtn]['ct']
 		self.lt = self.resource[self._rtn]['ct']
 		self.rn = None # resourceName
+		self.cni = 0 #currentNrOfInstances
 
 	def load(self, pc):
 		super().load(pc)
@@ -145,6 +146,7 @@ class Container(Resource):
 			if key=='lt': self.lt=pc[self._rtn]['lt']
 			if key=='rn': self.rn=pc[self._rtn]['rn']
 			if key=='pi': self.pi=pc[self._rtn]['pi']
+			if key=='cni': self.cni=pc[self._rtn]['cni']
 
 	def _set_rtn(self):
 		self._rtn = "m2m:cnt"

@@ -1,4 +1,4 @@
-#GhostM2M Project
+# GhostM2M Project
 
 _REST API for M2M communications based on DJango Framework and oneM2M standard_
 

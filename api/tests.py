@@ -377,6 +377,8 @@ class TestOneM2MAPI(TestCase):
         self.assertIn('m2m:cnt', response_cnt['pc'])
         self.assertIn('rn', response_cnt['pc']['m2m:cnt'])
         self.assertIn('ri', response_cnt['pc']['m2m:cnt'])
+        self.assertIn('cni', response_cnt['pc']['m2m:cnt'])
+        self.assertEqual(response_cnt['pc']['m2m:cnt']['cni'], 1)
 
         # Request ContentInstance
         request = {'m2m:rqp':{
@@ -409,6 +411,53 @@ class TestOneM2MAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         response_la = json.loads(response.content)['m2m:rsp']
         self.assertIn('pc', response_cin)
+
+        # Check updated parent <Container>
+        request = {'m2m:rqp':{
+            'op': Operation.Retrieve.value,
+            'fr':'{}:{}'.format(settings.GHOSTM2M['admin-user']['username'],settings.GHOSTM2M['admin-user']['pwd']),
+            'to':'/~/Cernicalo',
+        }}
+
+        request_str = json.dumps(request)
+        response = self.client.generic('GET', '/~/Cernicalo/{}'.format(cnt_ri),
+                                    request_str,
+                                    'application/json')
+        self.assertEqual(response.status_code, 200)
+        response_cnt = json.loads(response.content)['m2m:rsp']
+        self.assertIn('pc', response_cnt)
+        self.assertIn('m2m:cnt', response_cnt['pc'])
+        self.assertIn('rn', response_cnt['pc']['m2m:cnt'])
+        self.assertIn('ri', response_cnt['pc']['m2m:cnt'])
+
+        self.assertIn('la', response_cnt['pc']['m2m:cnt'])
+        self.assertEqual(response_cnt['pc']['m2m:cnt']['la'], cin_ri)
+
+
+        # create another ContentInstance
+        cin = f.create(ty=ResourceType.contentInstance.value,
+                       pi=cnt_ri,
+                       pc={'m2m:cin':{'con':'segundocontent'}})
+        cin_mapper = MappersFactory().get(cin)
+        cin_ri = cin_mapper.store(settings.GHOSTM2M['CSE-ID'], cin)
+        cin.set_id(cin_ri)
+
+        request_str = json.dumps(request)
+        response = self.client.generic('GET', '/~/Cernicalo/{}'.format(cnt_ri),
+                                    request_str,
+                                    'application/json')
+        self.assertEqual(response.status_code, 200)
+        response_cnt = json.loads(response.content)['m2m:rsp']
+
+        self.assertIn('cni', response_cnt['pc']['m2m:cnt'])
+        self.assertEqual(response_cnt['pc']['m2m:cnt']['cni'], 2)
+
+        self.assertIn('la', response_cnt['pc']['m2m:cnt'])
+        self.assertEqual(response_cnt['pc']['m2m:cnt']['la'], cin_ri)
+
+        
+        
+        
         
         
 

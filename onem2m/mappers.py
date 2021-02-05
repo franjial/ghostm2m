@@ -1,6 +1,7 @@
 from onem2m.resources import ResourcesFactory, Resource, ContentInstance, CSEBase
 from onem2m.db import DBConnection
 from bson.objectid import ObjectId
+import sys
 
 class MappersFactory:
 	def __init__(self):
@@ -93,7 +94,11 @@ class ContentInstanceMapper(ResourceMapper):
 			raise TypeError
 
 		if resource.pi is not None and stored_ri is not None:
-			self._db[csi].update_one({'_id':ObjectId(resource.pi)},{'$set': {'la':ObjectId(stored_ri)}})
+			cnt_childs = self._db[csi].find({'pi':resource.pi})
+			sys.stderr.write('--->'+str(cnt_childs.count())+'\n')
+			self._db[csi].update_one({'_id':ObjectId(resource.pi)},
+									 {'$set': {'la':ObjectId(stored_ri),
+									     	   'cni': cnt_childs.count()}} )
 		return stored_ri
 
 
