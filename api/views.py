@@ -18,22 +18,34 @@ def index(request):
 	return HttpResponse("hola mundo!")
 
 @csrf_exempt
-def m2mrequest(request, origin_form):
+def m2mrequest(request, cseid, resourceid=None, attrib=None):
 	data = json.loads(request.body)
 	primitive = None
 
+	# parse URL
+	try:
+		http_to = dict()
+		http_to['cse-id'] = cseid
 
-	path_items = origin_form.split('/')
-	http_to = dict()
-	if len(path_items)>0:
-		http_to['cse-id'] = path_items[0]
-		if len(path_items) > 1:
-			http_to['unstructured-resource-id'] = path_items[1]
-		if len(path_items) > 2:
-			http_to['attr'] = path_items[2]
+		if resourceid is not None:
+			aux = resourceid.split('?')
+			http_to['unstructured-resource-id'] = aux[0]
+			if len(aux) > 1: 
+				if attrib is None:
+					http_to['resource-fc'] = ''.join(aux[1:])
+				else:
+					#sys.stderr.write('::> {},{}\n'.format(aux[0],aux[1]))
+					resp = ResponsePrimitive(0, ResponseStatusCode.BAD_REQUEST.value)
+					return JsonResponse(resp.toDict())
 
-	else:
-		return JsonResponse({'status': 0, 'info': 'error mapping path'})
+		if attrib is not None:
+			aux = attrib.split('?')
+			http_to['attr'] = aux[0]
+
+			if len(aux) > 1: http_to['resource-fc'] = ''.join(aux[1:])
+	except:
+		resp = ResponsePrimitive(0, ResponseStatusCode.INTERNAL_SERVER_ERROR.value)
+		return JsonResponse(resp.toDict())
 
 
 	try:
