@@ -1,12 +1,11 @@
 from django.http import JsonResponse
 from django.http import HttpResponse
-
 from django.views.decorators.csrf import csrf_exempt
+
 from bson.objectid import ObjectId
 
 import json
 import datetime
-import sys
 
 from onem2m.resources import ResourcesFactory
 from onem2m.types import Operation, ResponseStatusCode, ResourceType
@@ -28,21 +27,11 @@ def m2mrequest(request, cseid, resourceid=None, attrib=None):
 		http_to['cse-id'] = cseid
 
 		if resourceid is not None:
-			aux = resourceid.split('?')
-			http_to['unstructured-resource-id'] = aux[0]
-			if len(aux) > 1: 
-				if attrib is None:
-					http_to['resource-fc'] = ''.join(aux[1:])
-				else:
-					#sys.stderr.write('::> {},{}\n'.format(aux[0],aux[1]))
-					resp = ResponsePrimitive(0, ResponseStatusCode.BAD_REQUEST.value)
-					return JsonResponse(resp.toDict())
+			http_to['unstructured-resource-id'] = resourceid
 
 		if attrib is not None:
-			aux = attrib.split('?')
-			http_to['attr'] = aux[0]
-
-			if len(aux) > 1: http_to['resource-fc'] = ''.join(aux[1:])
+			http_to['attr'] = attrib
+			
 	except:
 		resp = ResponsePrimitive(0, ResponseStatusCode.INTERNAL_SERVER_ERROR.value)
 		return JsonResponse(resp.toDict())
@@ -116,7 +105,9 @@ def m2mrequest(request, cseid, resourceid=None, attrib=None):
 			resp = ResponsePrimitive(rsc=ResponseStatusCode.NOT_IMPLEMENTED.value)
 			return JsonResponse(resp.toDict())	
 
-	# RETRIEVE
+
+
+	# RETRIEVE or DISCOVERY
 	elif request.method == "GET":
 		try:
 			try:
@@ -131,6 +122,18 @@ def m2mrequest(request, cseid, resourceid=None, attrib=None):
 					resource = ResourceMapper().retrieve(http_to["cse-id"], {'_id': ObjectId(http_to['unstructured-resource-id'])})
 				else:
 					resource = ResourceMapper().retrieve(http_to["cse-id"], {'csi': http_to['cse-id']})
+
+				filter_criteria = request.GET.dict()
+				
+
+				if filter_criteria:
+					# DISCOVERY
+					results = ResourceMapper().discovery(http_to["cse-id"], http_to['unstructured-resource-id'], filter_criteria)
+					rsp = {"m2m:rsp":{ "pc":{"m2m:uril":results},
+					                   "rsc":ResponseStatusCode.OK.value,
+									   "ri":resource.get_id()}}
+					return JsonResponse(rsp)
+
 
 				if 'attr' in http_to:
 					if hasattr(resource, http_to['attr']):

@@ -1,7 +1,6 @@
 from onem2m.resources import ResourcesFactory, Resource, ContentInstance, CSEBase
 from onem2m.db import DBConnection
 from bson.objectid import ObjectId
-import sys
 
 class MappersFactory:
 	def __init__(self):
@@ -73,6 +72,19 @@ class ResourceMapper:
 		else:
 			raise TypeError
 
+	def discovery(self, cseid, pi, fc):
+		mongodb_filter = dict()
+		mongodb_filter = fc.copy()
+
+		if 'ty' in mongodb_filter: mongodb_filter['ty'] = int(mongodb_filter['ty'])
+		#TODO continue with params in Table Summary on Filter conditions (Table 7.3.3.17.0 Document TS-0004)
+
+		mongodb_filter['pi']=str(pi)
+		result = self._db[cseid].find(mongodb_filter)
+		ret = list()
+		for doc in result:
+			ret.append('//{}/{}'.format(cseid, str(doc['_id'])))
+		return ret
 
 	#def delete(self, cseid, ri):
 	#	pass
@@ -95,7 +107,6 @@ class ContentInstanceMapper(ResourceMapper):
 
 		if resource.pi is not None and stored_ri is not None:
 			cnt_childs = self._db[csi].find({'pi':resource.pi})
-			sys.stderr.write('--->'+str(cnt_childs.count())+'\n')
 			self._db[csi].update_one({'_id':ObjectId(resource.pi)},
 									 {'$set': {'la':ObjectId(stored_ri),
 									     	   'cni': cnt_childs.count()}} )

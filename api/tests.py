@@ -411,6 +411,8 @@ class TestOneM2MAPI(TestCase):
         self.assertIn('m2m:cin', response_cin['pc'])
         self.assertIn('con', response_cin['pc']['m2m:cin'])
         self.assertIn('ri', response_cin['pc']['m2m:cin'])
+        self.assertIn('pi', response_cin['pc']['m2m:cin'])
+        self.assertEqual(response_cin['pc']['m2m:cin']['pi'], cnt_ri)
 
         # Request <last> <ContentInstance>
         request = {'m2m:rqp':{
@@ -447,6 +449,7 @@ class TestOneM2MAPI(TestCase):
         self.assertIn('la', response_cnt['pc']['m2m:cnt'])
         self.assertEqual(response_cnt['pc']['m2m:cnt']['la'], cin_ri)
 
+        
 
         # create another ContentInstance
         cin = f.create(ty=ResourceType.contentInstance.value,
@@ -465,9 +468,26 @@ class TestOneM2MAPI(TestCase):
 
         self.assertIn('cni', response_cnt['pc']['m2m:cnt'])
         self.assertEqual(response_cnt['pc']['m2m:cnt']['cni'], 2)
+        
 
         self.assertIn('la', response_cnt['pc']['m2m:cnt'])
         self.assertEqual(response_cnt['pc']['m2m:cnt']['la'], cin_ri)
+
+
+        request_str = json.dumps(request)
+        response = self.client.generic('GET', '/~/Cernicalo/{}?ty={}'.format(cnt_ri, ResourceType.contentInstance.value),
+                                    request_str,
+                                    'application/json')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('m2m:rsp', json.loads(response.content))
+        response_discovery = json.loads(response.content)['m2m:rsp']
+        self.assertIn('pc', response_discovery)
+        self.assertIn('m2m:uril', response_discovery['pc'])
+        self.assertIsInstance(response_discovery['pc']['m2m:uril'],list)
+        
+
+        
 
         
         
